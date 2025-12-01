@@ -34,6 +34,12 @@ app.use('/api/', limiter);
 const apiRoutes = require('./src/routes/api');
 app.use('/api', apiRoutes);
 
+// Log all API requests for debugging
+app.use('/api', (req, res, next) => {
+  console.log(`📡 API Request: ${req.method} ${req.path}`);
+  next();
+});
+
 // Serve static files
 // On Vercel, we also need to serve static files because vercel.json routing may not work correctly
 // with builds configuration. Express will handle static files as fallback.
@@ -43,12 +49,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // Serve index.html for non-API routes that don't match static files (SPA support)
-// This route only handles requests that weren't matched by static file middleware
+// This route only handles GET requests that weren't matched by static file middleware
 app.get('*', (req, res) => {
-  // Skip API routes - let them be handled by API routes or return 404
+  // Never handle API routes here - they should be handled by API routes above
   if (req.path.startsWith('/api')) {
+    // This should never happen if API routes are working correctly
+    console.error('⚠️ API request reached catch-all route:', req.method, req.path);
     if (!res.headersSent) {
-      res.status(404).json({ error: 'API endpoint not found' });
+      res.status(404).json({ error: 'API endpoint not found', path: req.path });
     }
     return;
   }
@@ -62,7 +70,7 @@ app.get('*', (req, res) => {
     return;
   }
   
-  // Serve index.html for all other routes (SPA fallback)
+  // Serve index.html for all other GET routes (SPA fallback)
   // This handles routes without file extensions
   const indexPath = path.join(__dirname, 'public', 'index.html');
   res.sendFile(indexPath, (err) => {

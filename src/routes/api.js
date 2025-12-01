@@ -9,13 +9,38 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test endpoint to verify routing
+router.get('/test', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'API routing is working',
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Test POST endpoint
+router.post('/test', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'API POST routing is working',
+    path: req.path,
+    method: req.method,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Social Media Tools
 router.post('/tools/tiktok-title', async (req, res) => {
   try {
+    console.log('📝 TikTok Title API called', { body: req.body });
     const { topic, tone, style } = req.body;
     const result = await aiService.generateTikTokTitle(topic, tone, style);
     res.json({ success: true, data: result });
   } catch (error) {
+    console.error('❌ TikTok Title API error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
