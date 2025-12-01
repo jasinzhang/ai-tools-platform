@@ -27,71 +27,92 @@ class AIService {
   }
 
   async callGoogleGemini(prompt, maxTokens) {
-    try {
-      if (!this.googleApiKey) {
-        throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
-      }
+    if (!this.googleApiKey) {
+      throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
+    }
 
-      // Use v1 API and latest model name (gemini-1.5-flash or gemini-1.5-pro)
-      // gemini-1.5-flash is faster and more cost-effective
-      // gemini-1.5-pro is more capable but slower
-      const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.googleApiKey}`;
-      
-      const axiosConfig = {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000  // 30 second timeout
-      };
+    // List of models to try in order (with fallback)
+    const modelsToTry = [
+      process.env.GEMINI_MODEL, // User specified model first
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro' // Fallback to original model name
+    ].filter(Boolean); // Remove undefined values
 
-      // 如果配置了代理，使用代理
-      if (this.proxyAgent) {
-        axiosConfig.httpsAgent = this.proxyAgent;
-        axiosConfig.httpAgent = this.proxyAgent;
-      }
+    // Remove duplicates
+    const uniqueModels = [...new Set(modelsToTry)];
 
-      const response = await axios.post(
-        url,
-        {
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.9,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: maxTokens || 500
+    // Try each model until one works
+    for (const model of uniqueModels) {
+      try {
+        // Try v1beta first (more stable)
+        let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.googleApiKey}`;
+        
+        const axiosConfig = {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 30000
+        };
+
+        if (this.proxyAgent) {
+          axiosConfig.httpsAgent = this.proxyAgent;
+          axiosConfig.httpAgent = this.proxyAgent;
+        }
+
+        const response = await axios.post(
+          url,
+          {
+            contents: [{
+              parts: [{
+                text: prompt
+              }]
+            }],
+            generationConfig: {
+              temperature: 0.9,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: maxTokens || 500
+            }
+          },
+          axiosConfig
+        );
+
+        if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
+          throw new Error('Invalid response from Gemini API');
+        }
+
+        const text = response.data.candidates[0].content.parts[0].text;
+        console.log(`✅ Successfully used Gemini model: ${model}`);
+        return text.trim();
+      } catch (error) {
+        // If it's a 404 (model not found), try next model
+        if (error.response && error.response.status === 404) {
+          console.log(`⚠️ Model ${model} not found, trying next model...`);
+          continue; // Try next model
+        }
+        
+        // If it's a different error or last model, throw it
+        if (model === uniqueModels[uniqueModels.length - 1]) {
+          console.error('Google Gemini API Error:', error.message);
+          if (error.response) {
+            console.error('Response status:', error.response.status);
+            console.error('Response data:', JSON.stringify(error.response.data, null, 2));
+            throw new Error(`Gemini API error (${error.response.status}): ${JSON.stringify(error.response.data?.error || error.response.data)}`);
+          } else if (error.request) {
+            console.error('No response received. Network error or timeout.');
+            throw new Error('Network error: Unable to connect to Gemini API. Please check your internet connection or use a VPN if you are in a restricted network environment.');
+          } else {
+            throw new Error(`Error: ${error.message}`);
           }
-        },
-        axiosConfig
-      );
-
-      if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
-        throw new Error('Invalid response from Gemini API');
-      }
-
-      const text = response.data.candidates[0].content.parts[0].text;
-      return text.trim();
-    } catch (error) {
-      console.error('Google Gemini API Error:', error.message);
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', JSON.stringify(error.response.data, null, 2));
-        throw new Error(`Gemini API error (${error.response.status}): ${JSON.stringify(error.response.data?.error || error.response.data)}`);
-      } else if (error.request) {
-        console.error('No response received. Network error or timeout.');
-        console.error('This usually means:');
-        console.error('1. Unable to reach Google API servers (may need VPN/proxy)');
-        console.error('2. Network connection issue');
-        console.error('3. Firewall blocking the connection');
-        throw new Error('Network error: Unable to connect to Gemini API. Please check your internet connection or use a VPN if you are in a restricted network environment.');
-      } else {
-        throw new Error(`Error: ${error.message}`);
+        }
       }
     }
+    
+    // If all models failed
+    throw new Error('All Gemini models failed. Please check your API key and network connection.');
   }
 
   async callOpenAI(prompt, maxTokens) {
