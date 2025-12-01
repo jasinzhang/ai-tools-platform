@@ -14,19 +14,20 @@ Error: Gemini API error (404): {"code":404,"message":"models/gemini-1.5-flash is
 
 1. **按顺序尝试多个模型**：
    - 首先尝试用户指定的模型（如果设置了 `GEMINI_MODEL`）
-   - 然后尝试 `gemini-1.5-flash-latest`
-   - 然后尝试 `gemini-1.5-pro-latest`
    - 然后尝试 `gemini-1.5-flash`
    - 然后尝试 `gemini-1.5-pro`
-   - 最后尝试 `gemini-pro`（原始模型）
+   - 然后尝试 `gemini-pro`
+   - 然后尝试 `gemini-1.5-flash-latest`
+   - 最后尝试 `gemini-1.5-pro-latest`
 
-2. **自动处理 404 错误**：
-   - 如果某个模型返回 404（不存在），自动尝试下一个
-   - 只有所有模型都失败时才抛出错误
+2. **同时尝试多个 API 版本**：
+   - 对每个模型，先尝试 `/v1` API
+   - 如果失败，再尝试 `/v1beta` API
+   - 这样可以最大化兼容性
 
-3. **使用 v1beta API**：
-   - 所有模型都使用 `/v1beta` API 版本
-   - 这个版本更稳定，支持更多模型
+3. **自动处理 404 错误**：
+   - 如果某个模型+API版本组合返回 404，自动尝试下一个
+   - 只有所有组合都失败时才抛出错误，支持更多模型
 
 ## 🎯 优势
 
