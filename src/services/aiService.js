@@ -7,6 +7,11 @@ class AIService {
     this.googleApiKey = process.env.GOOGLE_API_KEY;
     this.openaiApiKey = process.env.OPENAI_API_KEY;
     
+    // 缓存可用模型列表，避免频繁查询
+    this.availableModelsCache = null;
+    this.modelsCacheTime = null;
+    this.cacheTimeout = 3600000; // 1小时缓存
+    
     // 验证 API 密钥配置
     if (this.provider === 'google' && !this.googleApiKey) {
       console.error('❌ GOOGLE_API_KEY is not set in environment variables');
@@ -29,6 +34,35 @@ class AIService {
     }
   }
 
+  // 延迟函数，用于处理速率限制
+  async delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // 重试函数，带指数退避
+  async retryWithBackoff(fn, maxRetries = 3, baseDelay = 1000) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        // 如果是 429 错误，使用指数退避
+        if (error.response && error.response.status === 429) {
+          const retryAfter = error.response.headers['retry-after'];
+          const delay = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, attempt);
+          
+          if (attempt < maxRetries - 1) {
+            console.log(`⏳ Rate limit hit (429), waiting ${delay}ms before retry ${attempt + 1}/${maxRetries}`);
+            await this.delay(delay);
+            continue;
+          }
+        }
+        
+        // 如果不是 429 或已达到最大重试次数，抛出错误
+        throw error;
+      }
+    }
+  }
+
   async callAI(prompt, maxTokens = 500) {
     if (this.provider === 'google' && this.googleApiKey) {
       return await this.callGoogleGemini(prompt, maxTokens);
@@ -39,12 +73,14 @@ class AIService {
     }
   }
 
-  async callGoogleGemini(prompt, maxTokens) {
-    if (!this.googleApiKey) {
-      throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
+  async getAvailableModels() {
+    // 如果缓存有效，直接返回
+    if (this.availableModelsCache && this.modelsCacheTime && 
+        (Date.now() - this.modelsCacheTime) < this.cacheTimeout) {
+      return this.availableModelsCache;
     }
 
-    // First, try to list available models to diagnose the issue
+    // 尝试获取可用模型列表
     let availableModels = [];
     try {
       const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.googleApiKey}`;
@@ -56,16 +92,39 @@ class AIService {
         listConfig.httpsAgent = this.proxyAgent;
         listConfig.httpAgent = this.proxyAgent;
       }
-      const listResponse = await axios.get(listUrl, listConfig);
+      
+      // 使用重试机制获取模型列表
+      const listResponse = await this.retryWithBackoff(async () => {
+        return await axios.get(listUrl, listConfig);
+      }, 2, 2000); // 最多重试2次，基础延迟2秒
+      
       if (listResponse.data && listResponse.data.models) {
         availableModels = listResponse.data.models
           .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
           .map(m => m.name.replace('models/', ''));
         console.log(`📋 Found ${availableModels.length} available models:`, availableModels.slice(0, 5).join(', '));
+        
+        // 缓存结果
+        this.availableModelsCache = availableModels;
+        this.modelsCacheTime = Date.now();
       }
     } catch (listError) {
       console.log('⚠️ Could not list available models, will try default models');
+      if (listError.response && listError.response.status === 429) {
+        console.log('⚠️ Rate limited when listing models, using cached or default models');
+      }
     }
+    
+    return availableModels;
+  }
+
+  async callGoogleGemini(prompt, maxTokens) {
+    if (!this.googleApiKey) {
+      throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
+    }
+
+    // 获取可用模型列表（带缓存）
+    const availableModels = await this.getAvailableModels();
 
     // List of models to try in order (with fallback)
     const modelsToTry = [
@@ -104,23 +163,26 @@ class AIService {
             axiosConfig.httpAgent = this.proxyAgent;
           }
 
-          const response = await axios.post(
-            url,
-            {
-              contents: [{
-                parts: [{
-                  text: prompt
-                }]
-              }],
-              generationConfig: {
-                temperature: 0.9,
-                topK: 40,
-                topP: 0.95,
-                maxOutputTokens: maxTokens || 500
-              }
-            },
-            axiosConfig
-          );
+          // 使用重试机制处理 429 错误
+          const response = await this.retryWithBackoff(async () => {
+            return await axios.post(
+              url,
+              {
+                contents: [{
+                  parts: [{
+                    text: prompt
+                  }]
+                }],
+                generationConfig: {
+                  temperature: 0.9,
+                  topK: 40,
+                  topP: 0.95,
+                  maxOutputTokens: maxTokens || 500
+                }
+              },
+              axiosConfig
+            );
+          }, 3, 2000); // 最多重试3次，基础延迟2秒
 
           if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
             throw new Error('Invalid response from Gemini API');
@@ -143,6 +205,14 @@ class AIService {
           if (error.response && error.response.status === 404) {
             console.log(`⚠️ Model ${model} with API ${apiVersion} not found (404), trying next...`);
             continue; // Try next API version or model
+          }
+          
+          // If it's a 429 (rate limit), wait a bit and try next model
+          if (error.response && error.response.status === 429) {
+            console.log(`⚠️ Rate limit (429) for model ${model}, trying next model...`);
+            // 等待一小段时间再尝试下一个模型
+            await this.delay(1000);
+            continue; // Try next model
           }
           
           // If it's a 401/403 (auth error), stop trying and throw immediately
