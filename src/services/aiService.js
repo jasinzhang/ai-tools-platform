@@ -7,6 +7,19 @@ class AIService {
     this.googleApiKey = process.env.GOOGLE_API_KEY;
     this.openaiApiKey = process.env.OPENAI_API_KEY;
     
+    // 验证 API 密钥配置
+    if (this.provider === 'google' && !this.googleApiKey) {
+      console.error('❌ GOOGLE_API_KEY is not set in environment variables');
+      console.error('Please set GOOGLE_API_KEY in Vercel environment variables');
+    } else if (this.provider === 'google' && this.googleApiKey) {
+      // 检查 API 密钥格式（应该以 AIza 开头）
+      if (!this.googleApiKey.startsWith('AIza')) {
+        console.warn('⚠️ GOOGLE_API_KEY format may be incorrect (should start with "AIza")');
+      } else {
+        console.log('✅ GOOGLE_API_KEY is configured (format looks correct)');
+      }
+    }
+    
     // 配置代理
     this.proxyAgent = null;
     if (process.env.HTTP_PROXY || process.env.HTTPS_PROXY) {
