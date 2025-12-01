@@ -37,18 +37,24 @@ app.use(express.static(path.join(__dirname, 'public'), {
 }));
 
 // Serve index.html for non-API routes that don't match static files (SPA support)
-app.get('*', (req, res) => {
-  // Only serve index.html for routes that don't have a file extension and aren't API routes
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
-      if (err) {
-        console.error('Error serving index.html:', err);
-        res.status(404).send('Page not found');
-      }
-    });
-  } else {
-    res.status(404).json({ error: 'API route not found' });
+app.get('*', (req, res, next) => {
+  // Skip API routes
+  if (req.path.startsWith('/api')) {
+    return next();
   }
+  
+  // Skip static files (they should be served by Vercel)
+  if (req.path.match(/\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico)$/)) {
+    return next();
+  }
+  
+  // Serve index.html for all other routes
+  res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(404).send('Page not found');
+    }
+  });
 });
 
 // Error handling
