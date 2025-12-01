@@ -127,14 +127,20 @@ class AIService {
     const availableModels = await this.getAvailableModels();
 
     // List of models to try in order (with fallback)
+    // Priority: User specified > Available models from API > Latest models > Legacy models
     const modelsToTry = [
       process.env.GEMINI_MODEL, // User specified model first
-      ...(availableModels.length > 0 ? availableModels.slice(0, 3) : []), // Use discovered models if available
+      ...(availableModels.length > 0 ? availableModels.slice(0, 5) : []), // Use discovered models if available (up to 5)
+      // Latest models (confirmed working)
+      'gemini-2.5-flash',
+      'gemini-2.5-pro-exp',
+      // 1.5 series
       'gemini-1.5-flash',
       'gemini-1.5-pro',
-      'gemini-pro',
       'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest'
+      'gemini-1.5-pro-latest',
+      // Legacy models
+      'gemini-pro'
     ].filter(Boolean); // Remove undefined values
 
     // Remove duplicates
