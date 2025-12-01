@@ -32,7 +32,11 @@ class AIService {
         throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${this.googleApiKey}`;
+      // Use v1 API and latest model name (gemini-1.5-flash or gemini-1.5-pro)
+      // gemini-1.5-flash is faster and more cost-effective
+      // gemini-1.5-pro is more capable but slower
+      const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+      const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${this.googleApiKey}`;
       
       const axiosConfig = {
         headers: {
