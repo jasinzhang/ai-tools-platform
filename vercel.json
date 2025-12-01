@@ -12,18 +12,8 @@
       "dest": "/server.js"
     },
     {
-      "src": "/(.*\\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
-      "dest": "/public/$1"
-    },
-    {
       "src": "/(.*)",
       "dest": "/server.js"
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server.js"
     }
   ]
 }

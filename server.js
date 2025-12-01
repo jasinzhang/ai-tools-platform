@@ -34,15 +34,16 @@ app.use('/api/', limiter);
 const apiRoutes = require('./src/routes/api');
 app.use('/api', apiRoutes);
 
-// Serve static files - only in local development
-// On Vercel, static files are served automatically
-if (!process.env.VERCEL) {
-  app.use(express.static(path.join(__dirname, 'public'), {
-    extensions: ['html', 'css', 'js', 'json', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico']
-  }));
-}
+// Serve static files
+// On Vercel, we also need to serve static files because vercel.json routing may not work correctly
+// with builds configuration. Express will handle static files as fallback.
+app.use(express.static(path.join(__dirname, 'public'), {
+  extensions: ['html', 'css', 'js', 'json', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot'],
+  index: false // Don't serve index.html for directories
+}));
 
 // Serve index.html for non-API routes that don't match static files (SPA support)
+// This route only handles requests that weren't matched by static file middleware
 app.get('*', (req, res) => {
   // Skip API routes - let them be handled by API routes or return 404
   if (req.path.startsWith('/api')) {
@@ -52,27 +53,17 @@ app.get('*', (req, res) => {
     return;
   }
   
-  // On Vercel, static files should be handled by vercel.json routing
-  // If a request reaches here, it means:
-  // 1. It's not a static file (no extension), OR
-  // 2. The static file doesn't exist (Vercel routing passed it through)
-  // For static files that don't exist, we should return 404
-  // For routes without extensions, serve index.html (SPA support)
-  
-  if (process.env.VERCEL) {
-    // Check if it's a static file request (has file extension)
-    if (req.path.match(/\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
-      // Static file requested but doesn't exist - return 404
-      if (!res.headersSent) {
-        res.status(404).send('File not found');
-      }
-      return;
+  // Skip static file requests - they should be handled by express.static middleware
+  // If we reach here for a static file, it means the file doesn't exist
+  if (req.path.match(/\.(html|css|js|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+    if (!res.headersSent) {
+      res.status(404).send('File not found');
     }
+    return;
   }
   
   // Serve index.html for all other routes (SPA fallback)
-  // This handles routes like /tools/tiktok-title (without .html extension)
-  // or any other non-API, non-static-file routes
+  // This handles routes without file extensions
   const indexPath = path.join(__dirname, 'public', 'index.html');
   res.sendFile(indexPath, (err) => {
     if (err) {
