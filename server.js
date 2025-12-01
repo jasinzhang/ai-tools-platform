@@ -62,10 +62,11 @@ app.use((err, req, res, next) => {
 });
 
 // Handle Vercel serverless functions
-if (process.env.VERCEL) {
-  module.exports = app;
-} else {
-  // Local development
+// Vercel will automatically detect and use this export
+module.exports = app;
+
+// Local development - only run if not in Vercel
+if (!process.env.VERCEL && require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
     console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
