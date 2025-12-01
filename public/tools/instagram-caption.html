@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free Instagram caption generator - Create engaging Instagram captions with hashtags using AI.">
+    <title>Instagram Caption Generator - Free AI Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>📷 Instagram Caption Generator</h1>
+                <p>Generate engaging Instagram captions with relevant hashtags</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="instagramForm">
+                    <div class="form-group">
+                        <label for="description">Image Description *</label>
+                        <textarea id="description" name="description" placeholder="Describe your Instagram image or post..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="tone">Tone</label>
+                        <select id="tone" name="tone">
+                            <option value="friendly">Friendly</option>
+                            <option value="professional">Professional</option>
+                            <option value="funny">Funny</option>
+                            <option value="inspirational">Inspirational</option>
+                            <option value="casual">Casual</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="hashtagCount">Number of Hashtags</label>
+                        <select id="hashtagCount" name="hashtagCount">
+                            <option value="5">5</option>
+                            <option value="10" selected>10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate Caption</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Generated Caption:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                    <button class="btn copy-btn" onclick="copyCaption()">Copy Caption</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let generatedCaption = '';
+        
+        document.getElementById('instagramForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    description: document.getElementById('description').value,
+                    tone: document.getElementById('tone').value,
+                    hashtagCount: parseInt(document.getElementById('hashtagCount').value)
+                };
+                
+                const result = await callAPI('instagram-caption', data);
+                
+                if (result.success && result.data) {
+                    const hashtags = result.data.hashtags ? result.data.hashtags.join(' ') : '';
+                    generatedCaption = result.data.caption + '\n\n' + hashtags;
+                    
+                    let html = `<p style="white-space:pre-wrap;line-height:1.8;">${result.data.caption}</p>`;
+                    if (result.data.hashtags && result.data.hashtags.length > 0) {
+                        html += `<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #e5e7eb;"><strong>Hashtags:</strong><br>`;
+                        html += `<span style="color:#6366f1;">${result.data.hashtags.join(' ')}</span></div>`;
+                    }
+                    resultContent.innerHTML = html;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Caption';
+            }
+        });
+
+        function copyCaption() {
+            if (generatedCaption) {
+                copyToClipboard(generatedCaption);
+            }
+        }
+    </script>
+</body>
+</html>
+

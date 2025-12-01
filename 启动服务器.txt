@@ -1,0 +1,32 @@
+🚀 启动服务器 - 请按照以下步骤操作：
+
+1. 打开终端（Terminal）
+
+2. 进入项目目录：
+   cd "/Users/zhangqi/Desktop/ai探索/海外网页"
+
+3. 启动服务器（选择其中一种方法）：
+
+   方法A - 使用npm：
+   npm start
+
+   方法B - 使用启动脚本：
+   ./start.sh
+
+   方法C - 直接使用node：
+   node server.js
+
+4. 看到以下消息表示成功：
+   🚀 Server running on http://localhost:3000
+   📱 Environment: development
+
+5. 保持终端窗口打开（不要关闭）
+
+6. 在浏览器访问：
+   http://localhost:3000
+
+⚠️ 重要提示：
+- 服务器必须在终端中运行
+- 关闭终端窗口会停止服务器
+- 如果需要停止服务器，按 Ctrl+C
+

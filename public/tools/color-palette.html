@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free color palette generator - Create beautiful color palettes for your design projects.">
+    <title>Color Palette Generator - Free Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>🎨 Color Palette Generator</h1>
+                <p>Create beautiful color palettes for your design projects</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="colorForm">
+                    <div class="form-group">
+                        <label for="baseColor">Base Color</label>
+                        <input type="color" id="baseColor" name="baseColor" value="#3498db" style="width:100%;height:50px;border:none;border-radius:8px;cursor:pointer;">
+                    </div>
+                    <div class="form-group">
+                        <label for="style">Palette Style</label>
+                        <select id="style" name="style">
+                            <option value="complementary">Complementary</option>
+                            <option value="analogous">Analogous</option>
+                            <option value="triadic">Triadic</option>
+                            <option value="monochromatic">Monochromatic</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate Palette</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Color Palette:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.getElementById('colorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            
+            try {
+                const data = {
+                    baseColor: document.getElementById('baseColor').value,
+                    style: document.getElementById('style').value
+                };
+                
+                const result = await callAPI('color-palette', data);
+                
+                if (result.success && result.data.palette) {
+                    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;">';
+                    result.data.palette.forEach((color, index) => {
+                        html += `
+                            <div style="text-align:center;">
+                                <div style="width:100%;height:120px;background:${color.hex};border-radius:8px;margin-bottom:0.5rem;border:2px solid #e5e7eb;cursor:pointer;" onclick="copyToClipboard('${color.hex}')" title="Click to copy"></div>
+                                <div style="font-family:monospace;font-size:0.875rem;color:#6b7280;">${color.hex}</div>
+                                <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.25rem;">${color.name}</div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    resultContent.innerHTML = html;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Palette';
+            }
+        });
+    </script>
+</body>
+</html>
+

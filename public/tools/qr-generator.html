@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free QR code generator - Create custom QR codes for URLs, text, and more.">
+    <title>QR Code Generator - Free Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>📱 QR Code Generator</h1>
+                <p>Create custom QR codes for URLs, text, or any content</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="qrForm">
+                    <div class="form-group">
+                        <label for="text">Content (URL or Text) *</label>
+                        <input type="text" id="text" name="text" placeholder="https://example.com or any text" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="size">Size (px)</label>
+                        <select id="size" name="size">
+                            <option value="200">Small (200px)</option>
+                            <option value="300" selected>Medium (300px)</option>
+                            <option value="400">Large (400px)</option>
+                            <option value="500">Extra Large (500px)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate QR Code</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Your QR Code:</h3>
+                    <div class="result-content" id="resultContent" style="text-align:center;"></div>
+                    <button class="btn copy-btn" onclick="downloadQR()">Download QR Code</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let qrImageData = '';
+        
+        document.getElementById('qrForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    text: document.getElementById('text').value,
+                    size: parseInt(document.getElementById('size').value)
+                };
+                
+                const result = await callAPI('qr-generator', data);
+                
+                if (result.success && result.data.image) {
+                    qrImageData = result.data.image;
+                    resultContent.innerHTML = `<img src="${result.data.image}" alt="QR Code" style="max-width:100%;border:1px solid #e5e7eb;border-radius:8px;">`;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate QR Code';
+            }
+        });
+
+        function downloadQR() {
+            if (qrImageData) {
+                const link = document.createElement('a');
+                link.href = qrImageData;
+                link.download = 'qrcode.png';
+                link.click();
+            }
+        }
+    </script>
+</body>
+</html>
+

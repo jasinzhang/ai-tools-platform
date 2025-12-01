@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free text summarizer - Summarize long articles and text into key points using AI.">
+    <title>Text Summarizer - Free AI Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>📝 Text Summarizer</h1>
+                <p>Summarize long articles and text into concise key points</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="summarizerForm">
+                    <div class="form-group">
+                        <label for="text">Text to Summarize *</label>
+                        <textarea id="text" name="text" placeholder="Paste your long article or text here..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="length">Summary Length</label>
+                        <select id="length" name="length">
+                            <option value="short">Short (2-3 sentences)</option>
+                            <option value="medium" selected>Medium (4-5 sentences)</option>
+                            <option value="long">Long (6-8 sentences)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Summarize Text</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Summary:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                    <button class="btn copy-btn" onclick="copySummary()">Copy Summary</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let summaryText = '';
+        
+        document.getElementById('summarizerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Summarizing...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    text: document.getElementById('text').value,
+                    length: document.getElementById('length').value
+                };
+                
+                const result = await callAPI('text-summarizer', data);
+                
+                if (result.success && result.data.summary) {
+                    summaryText = result.data.summary;
+                    resultContent.innerHTML = `<p style="white-space:pre-wrap;line-height:1.8;">${result.data.summary}</p>`;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Summarize Text';
+            }
+        });
+
+        function copySummary() {
+            if (summaryText) {
+                copyToClipboard(summaryText);
+            }
+        }
+    </script>
+</body>
+</html>
+

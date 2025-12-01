@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free product name generator - Generate creative product name ideas using AI.">
+    <title>Product Name Generator - Free AI Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>💡 Product Name Generator</h1>
+                <p>Generate creative and memorable product name ideas</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="productNameForm">
+                    <div class="form-group">
+                        <label for="description">Product Description *</label>
+                        <textarea id="description" name="description" placeholder="Describe your product, its features, and target audience..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="industry">Industry</label>
+                        <select id="industry" name="industry">
+                            <option value="general">General</option>
+                            <option value="tech">Technology</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="food">Food & Beverage</option>
+                            <option value="health">Health & Wellness</option>
+                            <option value="beauty">Beauty</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="style">Style</label>
+                        <select id="style" name="style">
+                            <option value="modern">Modern</option>
+                            <option value="classic">Classic</option>
+                            <option value="creative">Creative</option>
+                            <option value="professional">Professional</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate Names</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Product Name Suggestions:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.getElementById('productNameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    description: document.getElementById('description').value,
+                    industry: document.getElementById('industry').value,
+                    style: document.getElementById('style').value
+                };
+                
+                const result = await callAPI('product-name', data);
+                
+                if (result.success && result.data.names) {
+                    let html = '<div style="text-align:left;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;">';
+                    result.data.names.forEach(name => {
+                        const cleanName = name.replace(/^\d+\.\s*/, '').trim();
+                        html += `<div style="padding:1rem;background:white;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;transition:all 0.3s;" onclick="copyToClipboard('${cleanName.replace(/'/g, "\\'")}')" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb'">${cleanName}</div>`;
+                    });
+                    html += '</div>';
+                    resultContent.innerHTML = html;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Names';
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free YouTube title generator - Create SEO-friendly YouTube titles and descriptions with AI.">
+    <title>YouTube Title Generator - Free AI Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>▶️ YouTube Title & Description Generator</h1>
+                <p>Create SEO-friendly YouTube titles and descriptions that boost your views</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="youtubeForm">
+                    <div class="form-group">
+                        <label for="topic">Video Topic *</label>
+                        <input type="text" id="topic" name="topic" placeholder="e.g., How to cook pasta" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="description">Video Description (Optional)</label>
+                        <textarea id="description" name="description" placeholder="Brief description of your video content..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="tone">Tone</label>
+                        <select id="tone" name="tone">
+                            <option value="engaging">Engaging</option>
+                            <option value="professional">Professional</option>
+                            <option value="casual">Casual</option>
+                            <option value="dramatic">Dramatic</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate Content</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Generated Content:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                    <button class="btn copy-btn" onclick="copyContent()">Copy All</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let generatedContent = {};
+        
+        document.getElementById('youtubeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    topic: document.getElementById('topic').value,
+                    description: document.getElementById('description').value,
+                    tone: document.getElementById('tone').value
+                };
+                
+                const result = await callAPI('youtube-title', data);
+                
+                if (result.success && result.data) {
+                    generatedContent = result.data;
+                    
+                    let html = `<div style="text-align:left;">`;
+                    if (result.data.title) {
+                        html += `<div style="margin-bottom:1.5rem;"><strong>Title:</strong><br>`;
+                        html += `<p style="font-size:1.125rem;color:#6366f1;margin-top:0.5rem;">${result.data.title}</p></div>`;
+                    }
+                    if (result.data.description) {
+                        html += `<div style="margin-bottom:1.5rem;"><strong>Description:</strong><br>`;
+                        html += `<p style="white-space:pre-wrap;line-height:1.8;margin-top:0.5rem;">${result.data.description}</p></div>`;
+                    }
+                    if (result.data.tags && result.data.tags.length > 0) {
+                        html += `<div><strong>Tags:</strong><br>`;
+                        html += `<span style="color:#6366f1;margin-top:0.5rem;display:inline-block;">${result.data.tags.join(', ')}</span></div>`;
+                    }
+                    html += `</div>`;
+                    resultContent.innerHTML = html;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Content';
+            }
+        });
+
+        function copyContent() {
+            if (generatedContent.title) {
+                const fullText = `Title: ${generatedContent.title}\n\nDescription: ${generatedContent.description}\n\nTags: ${generatedContent.tags ? generatedContent.tags.join(', ') : ''}`;
+                copyToClipboard(fullText);
+            }
+        }
+    </script>
+</body>
+</html>
+

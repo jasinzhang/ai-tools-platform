@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free username generator - Create unique and catchy usernames for games and social media.">
+    <title>Username Generator - Free AI Tool</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxxxxxxxxxx" crossorigin="anonymous"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <div class="logo">
+                    <h1><a href="/" style="text-decoration:none;color:inherit;">AI Tools</a></h1>
+                </div>
+                <a href="/" class="nav-link">← Back to Home</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="tool-page">
+        <div class="container">
+            <div class="tool-header">
+                <h1>👤 Username Generator</h1>
+                <p>Generate unique and catchy usernames for games and social media</p>
+            </div>
+
+            <div class="tool-container">
+                <form id="usernameForm">
+                    <div class="form-group">
+                        <label for="keyword">Keyword (Optional)</label>
+                        <input type="text" id="keyword" name="keyword" placeholder="e.g., gamer, ninja, star">
+                    </div>
+                    <div class="form-group">
+                        <label for="style">Style</label>
+                        <select id="style" name="style">
+                            <option value="cool">Cool</option>
+                            <option value="funny">Funny</option>
+                            <option value="professional">Professional</option>
+                            <option value="creative">Creative</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="length">Length</label>
+                        <select id="length" name="length">
+                            <option value="short">Short (5-8 chars)</option>
+                            <option value="medium" selected>Medium (9-12 chars)</option>
+                            <option value="long">Long (13+ chars)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn" id="generateBtn">Generate Usernames</button>
+                </form>
+
+                <div class="result-container" id="resultContainer">
+                    <h3 class="result-title">Username Suggestions:</h3>
+                    <div class="result-content" id="resultContent"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="ad-container ad-middle">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-xxxxxxxxxxxxxxxx"
+             data-ad-slot="0987654321"
+             data-ad-format="horizontal"
+             data-full-width-responsive="true"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        document.getElementById('usernameForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('generateBtn');
+            const resultContainer = document.getElementById('resultContainer');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Generating...';
+            resultContainer.classList.remove('show');
+            
+            try {
+                const data = {
+                    keyword: document.getElementById('keyword').value || '',
+                    style: document.getElementById('style').value,
+                    length: document.getElementById('length').value
+                };
+                
+                const result = await callAPI('username-generator', data);
+                
+                if (result.success && result.data.usernames) {
+                    let html = '<div style="text-align:left;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem;">';
+                    result.data.usernames.forEach(username => {
+                        const cleanUsername = username.replace(/^\d+\.\s*/, '').trim();
+                        html += `<div style="padding:0.75rem;background:white;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;font-family:monospace;transition:all 0.3s;" onclick="copyToClipboard('${cleanUsername.replace(/'/g, "\\'")}')" onmouseover="this.style.borderColor='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb'">${cleanUsername}</div>`;
+                    });
+                    html += '</div>';
+                    resultContent.innerHTML = html;
+                    resultContainer.classList.add('show');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Generate Usernames';
+            }
+        });
+    </script>
+</body>
+</html>
+
