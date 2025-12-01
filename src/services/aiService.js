@@ -31,9 +31,33 @@ class AIService {
       throw new Error('Google API key is not configured. Please set GOOGLE_API_KEY in .env file');
     }
 
+    // First, try to list available models to diagnose the issue
+    let availableModels = [];
+    try {
+      const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.googleApiKey}`;
+      const listConfig = {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000
+      };
+      if (this.proxyAgent) {
+        listConfig.httpsAgent = this.proxyAgent;
+        listConfig.httpAgent = this.proxyAgent;
+      }
+      const listResponse = await axios.get(listUrl, listConfig);
+      if (listResponse.data && listResponse.data.models) {
+        availableModels = listResponse.data.models
+          .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+          .map(m => m.name.replace('models/', ''));
+        console.log(`📋 Found ${availableModels.length} available models:`, availableModels.slice(0, 5).join(', '));
+      }
+    } catch (listError) {
+      console.log('⚠️ Could not list available models, will try default models');
+    }
+
     // List of models to try in order (with fallback)
     const modelsToTry = [
       process.env.GEMINI_MODEL, // User specified model first
+      ...(availableModels.length > 0 ? availableModels.slice(0, 3) : []), // Use discovered models if available
       'gemini-1.5-flash',
       'gemini-1.5-pro',
       'gemini-pro',
@@ -45,7 +69,9 @@ class AIService {
     const uniqueModels = [...new Set(modelsToTry)];
 
     // API versions to try
-    const apiVersions = ['v1', 'v1beta'];
+    const apiVersions = ['v1beta', 'v1']; // Try v1beta first as it's more stable
+
+    const errors = []; // Collect all errors for better diagnostics
 
     // Try each model with each API version until one works
     for (const model of uniqueModels) {
@@ -91,10 +117,25 @@ class AIService {
           console.log(`✅ Successfully used Gemini model: ${model} with API ${apiVersion}`);
           return text.trim();
         } catch (error) {
+          // Collect error information
+          const errorInfo = {
+            model,
+            apiVersion,
+            status: error.response?.status,
+            message: error.response?.data?.error?.message || error.message
+          };
+          errors.push(errorInfo);
+          
           // If it's a 404 (model not found), try next combination
           if (error.response && error.response.status === 404) {
-            console.log(`⚠️ Model ${model} with API ${apiVersion} not found, trying next...`);
+            console.log(`⚠️ Model ${model} with API ${apiVersion} not found (404), trying next...`);
             continue; // Try next API version or model
+          }
+          
+          // If it's a 401/403 (auth error), stop trying and throw immediately
+          if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+            console.error(`❌ Authentication error (${error.response.status}): Invalid API key or insufficient permissions`);
+            throw new Error(`Gemini API authentication failed (${error.response.status}): ${error.response.data?.error?.message || 'Invalid API key or insufficient permissions'}`);
           }
           
           // If it's a different error and this is the last combination, throw it
@@ -102,13 +143,14 @@ class AIService {
           const isLastApiVersion = apiVersion === apiVersions[apiVersions.length - 1];
           
           if (isLastModel && isLastApiVersion) {
-            console.error('Google Gemini API Error:', error.message);
+            console.error('❌ All model combinations failed. Error summary:');
+            errors.forEach(e => {
+              console.error(`  - ${e.model} (${e.apiVersion}): ${e.status} - ${e.message}`);
+            });
+            
             if (error.response) {
-              console.error('Response status:', error.response.status);
-              console.error('Response data:', JSON.stringify(error.response.data, null, 2));
-              throw new Error(`Gemini API error (${error.response.status}): ${JSON.stringify(error.response.data?.error || error.response.data)}`);
+              throw new Error(`Gemini API error: All models failed. Last error (${error.response.status}): ${JSON.stringify(error.response.data?.error || error.response.data)}. Please check your API key at https://makersuite.google.com/app/apikey`);
             } else if (error.request) {
-              console.error('No response received. Network error or timeout.');
               throw new Error('Network error: Unable to connect to Gemini API. Please check your internet connection or use a VPN if you are in a restricted network environment.');
             } else {
               throw new Error(`Error: ${error.message}`);
@@ -119,7 +161,7 @@ class AIService {
     }
     
     // If all models and API versions failed
-    throw new Error('All Gemini models and API versions failed. Please check your API key and network connection.');
+    throw new Error(`All Gemini models and API versions failed. Tried ${uniqueModels.length} models with ${apiVersions.length} API versions. Please verify your API key at https://makersuite.google.com/app/apikey and check the Vercel environment variables.`);
   }
 
   async callOpenAI(prompt, maxTokens) {
