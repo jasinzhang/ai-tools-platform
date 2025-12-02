@@ -227,7 +227,7 @@ class AIService {
                     temperature: 0.9,
                     topK: 40,
                     topP: 0.95,
-                    maxOutputTokens: maxTokens || 500
+                    maxOutputTokens: maxTokens || 2000 // Increased from 500 to 2000 to avoid truncation
                   }
                 },
                 axiosConfig
@@ -254,19 +254,32 @@ class AIService {
           }
 
           const candidate = response.data.candidates[0];
+          console.log(`   📦 Candidate finishReason: ${candidate.finishReason || 'N/A'}`);
           console.log(`   📦 Candidate has content: ${!!candidate.content}`);
           console.log(`   📦 Candidate has parts: ${!!(candidate.content && candidate.content.parts)}`);
           console.log(`   📦 Parts length: ${candidate.content?.parts?.length || 0}`);
           
+          // Log full candidate structure for debugging
+          if (!candidate.content?.parts || !candidate.content.parts[0]) {
+            console.log(`   ⚠️ Full candidate structure:`, JSON.stringify(candidate, null, 2).substring(0, 1000));
+          }
+          
           if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
-            console.log(`   ⚠️ Invalid candidate structure:`, JSON.stringify(candidate).substring(0, 500));
-            throw new Error('Invalid response from Gemini API: missing content parts');
+            // Check if there's text in a different location (some API versions might structure it differently)
+            const fullResponse = JSON.stringify(response.data, null, 2);
+            console.log(`   ⚠️ Full response structure (first 2000 chars):`, fullResponse.substring(0, 2000));
+            throw new Error(`Invalid response from Gemini API: missing content parts. Finish reason: ${candidate.finishReason || 'unknown'}`);
           }
 
           const text = candidate.content.parts[0].text;
           if (!text) {
             console.log(`   ⚠️ Empty text in response:`, JSON.stringify(candidate.content.parts[0]).substring(0, 500));
             throw new Error('Invalid response from Gemini API: empty text');
+          }
+          
+          // Warn if response was truncated
+          if (candidate.finishReason === 'MAX_TOKENS') {
+            console.log(`   ⚠️ Response was truncated (MAX_TOKENS), consider increasing maxOutputTokens`);
           }
           
           console.log(`✅ Successfully used Gemini model: ${model} with API ${apiVersion}`);
