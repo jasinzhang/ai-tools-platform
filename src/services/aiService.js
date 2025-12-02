@@ -100,8 +100,20 @@ class AIService {
       
       if (listResponse.data && listResponse.data.models) {
         availableModels = listResponse.data.models
-          .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
-          .map(m => m.name.replace('models/', ''));
+          .filter(m => {
+            // Filter models that support generateContent
+            const supportsGenerateContent = m.supportedGenerationMethods && 
+              m.supportedGenerationMethods.includes('generateContent');
+            // Also check if model name looks valid (not empty, not just 'models/')
+            const hasValidName = m.name && m.name.replace('models/', '').length > 0;
+            return supportsGenerateContent && hasValidName;
+          })
+          .map(m => {
+            // Remove 'models/' prefix if present
+            let modelName = m.name.replace(/^models\//, '');
+            console.log(`  - Model: ${m.name} -> ${modelName}`);
+            return modelName;
+          });
         console.log(`📋 Found ${availableModels.length} available models:`, availableModels.slice(0, 5).join(', '));
         
         // 缓存结果
@@ -127,24 +139,54 @@ class AIService {
     const availableModels = await this.getAvailableModels();
 
     // List of models to try in order (with fallback)
-    // Priority: User specified > Available models from API > Latest models > Legacy models
+    // Priority: User specified > Confirmed working models > Available models from API > Other models
     const modelsToTry = [
       process.env.GEMINI_MODEL, // User specified model first
-      ...(availableModels.length > 0 ? availableModels.slice(0, 5) : []), // Use discovered models if available (up to 5)
-      // Latest models (confirmed working)
+      // Confirmed working models (from user's Google dashboard)
       'gemini-2.5-flash',
       'gemini-2.5-pro-exp',
-      // 1.5 series
+      // Try available models from API (but prioritize confirmed ones above)
+      ...(availableModels.length > 0 ? availableModels.filter(m => 
+        !modelsToTry.includes(m) && 
+        m !== 'gemini-2.5-flash' && 
+        m !== 'gemini-2.5-pro-exp'
+      ).slice(0, 3) : []), // Use up to 3 additional discovered models
+      // 1.5 series (fallback)
       'gemini-1.5-flash',
       'gemini-1.5-pro',
       'gemini-1.5-flash-latest',
       'gemini-1.5-pro-latest',
-      // Legacy models
+      // Legacy models (last resort)
       'gemini-pro'
     ].filter(Boolean); // Remove undefined values
+    
+    // Fix: modelsToTry might reference itself before definition, so rebuild
+    const confirmedModels = [
+      process.env.GEMINI_MODEL,
+      'gemini-2.5-flash',
+      'gemini-2.5-pro-exp'
+    ].filter(Boolean);
+    
+    const additionalModels = availableModels.length > 0 
+      ? availableModels.filter(m => !confirmedModels.includes(m)).slice(0, 3)
+      : [];
+    
+    const fallbackModels = [
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-pro-latest',
+      'gemini-pro'
+    ];
+    
+    const modelsToTryFixed = [
+      ...confirmedModels,
+      ...additionalModels,
+      ...fallbackModels
+    ].filter(Boolean);
 
     // Remove duplicates
-    const uniqueModels = [...new Set(modelsToTry)];
+    const uniqueModels = [...new Set(modelsToTryFixed)];
     
     console.log(`🔍 Will try ${uniqueModels.length} models:`, uniqueModels.slice(0, 5).join(', '), uniqueModels.length > 5 ? '...' : '');
 
@@ -157,8 +199,11 @@ class AIService {
     for (const model of uniqueModels) {
       for (const apiVersion of apiVersions) {
         try {
-          const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${this.googleApiKey}`;
+          // Try different URL formats
+          // Format 1: Standard format
+          let url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${this.googleApiKey}`;
           console.log(`🔄 Trying: ${model} with API ${apiVersion}`);
+          console.log(`   URL: ${url.replace(this.googleApiKey, '***')}`);
           
           const axiosConfig = {
             headers: {
@@ -212,7 +257,14 @@ class AIService {
           
           // If it's a 404 (model not found), try next combination
           if (error.response && error.response.status === 404) {
-            console.log(`⚠️ Model ${model} with API ${apiVersion} not found (404), trying next...`);
+            const errorData = error.response.data?.error || error.response.data;
+            const errorMsg = errorData?.message || JSON.stringify(errorData);
+            console.log(`⚠️ Model ${model} with API ${apiVersion} not found (404)`);
+            console.log(`   Error: ${errorMsg.substring(0, 200)}`);
+            // Log full error for first few attempts to help diagnose
+            if (errors.length < 3) {
+              console.log(`   Full error:`, JSON.stringify(errorData, null, 2));
+            }
             continue; // Try next API version or model
           }
           
