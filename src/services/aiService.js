@@ -145,6 +145,8 @@ class AIService {
 
     // Remove duplicates
     const uniqueModels = [...new Set(modelsToTry)];
+    
+    console.log(`🔍 Will try ${uniqueModels.length} models:`, uniqueModels.slice(0, 5).join(', '), uniqueModels.length > 5 ? '...' : '');
 
     // API versions to try
     const apiVersions = ['v1beta', 'v1']; // Try v1beta first as it's more stable
@@ -156,6 +158,7 @@ class AIService {
       for (const apiVersion of apiVersions) {
         try {
           const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${this.googleApiKey}`;
+          console.log(`🔄 Trying: ${model} with API ${apiVersion}`);
           
           const axiosConfig = {
             headers: {
