@@ -30,15 +30,15 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// API Routes (must be before static files to avoid conflicts)
-const apiRoutes = require('./src/routes/api');
-app.use('/api', apiRoutes);
-
-// Log all API requests for debugging
+// Log all API requests for debugging (before routes)
 app.use('/api', (req, res, next) => {
   console.log(`📡 API Request: ${req.method} ${req.path}`);
   next();
 });
+
+// API Routes (must be before static files to avoid conflicts)
+const apiRoutes = require('./src/routes/api');
+app.use('/api', apiRoutes);
 
 // Serve static files
 // On Vercel, we also need to serve static files because vercel.json routing may not work correctly
@@ -102,6 +102,14 @@ app.use((err, req, res, next) => {
 // Vercel expects a handler function, not the app directly
 // The @vercel/node builder will automatically wrap Express apps correctly
 module.exports = app;
+
+// Add startup logging for Vercel
+if (process.env.VERCEL) {
+  console.log('🚀 Server initialized on Vercel');
+  console.log('📦 Environment:', process.env.NODE_ENV || 'production');
+  console.log('🔑 AI Provider:', process.env.AI_PROVIDER || 'google');
+  console.log('✅ API routes configured');
+}
 
 // Local development - only run if not in Vercel
 if (!process.env.VERCEL && require.main === module) {
