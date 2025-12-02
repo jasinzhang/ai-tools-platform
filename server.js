@@ -9,6 +9,10 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - Required for Vercel and express-rate-limit to work correctly
+// Vercel uses proxies, so we need to trust them to get correct client IPs
+app.set('trust proxy', true);
+
 // Middleware - Temporarily relaxed CSP for testing
 app.use(helmet({
   contentSecurityPolicy: false  // Disabled for testing - enable in production
