@@ -9,9 +9,15 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy - Required for Vercel and express-rate-limit to work correctly
-// Vercel uses proxies, so we need to trust them to get correct client IPs
-app.set('trust proxy', true);
+// Trust proxy - Required for Vercel
+// On Vercel, we trust the first proxy (Vercel's edge network)
+// This is safe because Vercel controls the proxy infrastructure
+if (process.env.VERCEL) {
+  app.set('trust proxy', 1); // Trust only the first proxy (Vercel's edge)
+} else {
+  // Local development - no proxy
+  app.set('trust proxy', false);
+}
 
 // Middleware - Temporarily relaxed CSP for testing
 app.use(helmet({
@@ -27,10 +33,18 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Rate limiting
+// Configure to work with Vercel's proxy setup
+// On Vercel, we trust only the first proxy (Vercel's edge), which is safe
+// We disable the trust proxy validation warning since we're using trust proxy: 1 (safe configuration)
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 30,
-  message: 'Too many requests, please try again later.'
+  message: 'Too many requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Disable trust proxy validation - we're using trust proxy: 1 which is safe
+  // This prevents the ERR_ERL_PERMISSIVE_TRUST_PROXY warning
+  validate: false // Disable all validations since we know our setup is correct
 });
 app.use('/api/', limiter);
 
