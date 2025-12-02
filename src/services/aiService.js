@@ -161,13 +161,17 @@ class AIService {
       ? availableModels.filter(m => !confirmedModels.includes(m)).slice(0, 3)
       : [];
     
-    const fallbackModels = [
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest',
-      'gemini-pro'
-    ];
+        // Prioritize models without thinking mode to avoid token waste
+        // gemini-2.0-flash series doesn't use thinking tokens
+        const fallbackModels = [
+          'gemini-2.0-flash', // No thinking mode, faster and more efficient
+          'gemini-2.0-flash-001',
+          'gemini-1.5-flash',
+          'gemini-1.5-pro',
+          'gemini-1.5-flash-latest',
+          'gemini-1.5-pro-latest',
+          'gemini-pro'
+        ];
     
     // Combine all models in priority order
     const modelsToTry = [
@@ -227,7 +231,9 @@ class AIService {
                     temperature: 0.9,
                     topK: 40,
                     topP: 0.95,
-                    maxOutputTokens: maxTokens || 2000 // Increased from 500 to 2000 to avoid truncation
+                    maxOutputTokens: maxTokens || 4000, // Increased to 4000 to account for thinking tokens
+                    // Disable thinking mode for gemini-2.5 models to avoid token waste
+                    responseModalities: ['TEXT'] // Explicitly request text-only response
                   }
                 },
                 axiosConfig
@@ -254,7 +260,10 @@ class AIService {
           }
 
           const candidate = response.data.candidates[0];
+          const usageMetadata = response.data.usageMetadata;
+          
           console.log(`   📦 Candidate finishReason: ${candidate.finishReason || 'N/A'}`);
+          console.log(`   📦 Usage: prompt=${usageMetadata?.promptTokenCount || 0}, total=${usageMetadata?.totalTokenCount || 0}, thoughts=${usageMetadata?.thoughtsTokenCount || 0}`);
           console.log(`   📦 Candidate has content: ${!!candidate.content}`);
           console.log(`   📦 Candidate has parts: ${!!(candidate.content && candidate.content.parts)}`);
           console.log(`   📦 Parts length: ${candidate.content?.parts?.length || 0}`);
@@ -264,10 +273,20 @@ class AIService {
             console.log(`   ⚠️ Full candidate structure:`, JSON.stringify(candidate, null, 2).substring(0, 1000));
           }
           
+          // Handle MAX_TOKENS case - check if there's any text content despite truncation
+          if (candidate.finishReason === 'MAX_TOKENS' && (!candidate.content?.parts || !candidate.content.parts[0])) {
+            console.log(`   ⚠️ Response truncated due to MAX_TOKENS. Thoughts tokens: ${usageMetadata?.thoughtsTokenCount || 0}`);
+            console.log(`   ⚠️ Full response structure (first 3000 chars):`, JSON.stringify(response.data, null, 2).substring(0, 3000));
+            
+            // Try to increase maxOutputTokens and retry with a different model or configuration
+            // For now, throw error to try next model
+            throw new Error(`Response truncated (MAX_TOKENS). Used ${usageMetadata?.thoughtsTokenCount || 0} tokens for thinking, leaving no room for output. Consider using a model without thinking mode or increasing maxOutputTokens further.`);
+          }
+          
           if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
             // Check if there's text in a different location (some API versions might structure it differently)
             const fullResponse = JSON.stringify(response.data, null, 2);
-            console.log(`   ⚠️ Full response structure (first 2000 chars):`, fullResponse.substring(0, 2000));
+            console.log(`   ⚠️ Full response structure (first 3000 chars):`, fullResponse.substring(0, 3000));
             throw new Error(`Invalid response from Gemini API: missing content parts. Finish reason: ${candidate.finishReason || 'unknown'}`);
           }
 
