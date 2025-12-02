@@ -191,14 +191,16 @@ class AIService {
       for (const apiVersion of apiVersions) {
         try {
           // Try different URL formats
-          // Format 1: Standard format
+          // Format 1: Standard format with API key in URL
           let url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${this.googleApiKey}`;
           console.log(`🔄 Trying: ${model} with API ${apiVersion}`);
           console.log(`   URL: ${url.replace(this.googleApiKey, '***')}`);
           
           const axiosConfig = {
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              // Try adding API key in header as well (some endpoints might require this)
+              'x-goog-api-key': this.googleApiKey
             },
             timeout: 60000 // Increase timeout to 60 seconds for slow responses
           };
