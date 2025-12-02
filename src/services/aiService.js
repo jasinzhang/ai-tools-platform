@@ -106,15 +106,25 @@ class AIService {
               m.supportedGenerationMethods.includes('generateContent');
             // Also check if model name looks valid (not empty, not just 'models/')
             const hasValidName = m.name && m.name.replace('models/', '').length > 0;
-            return supportsGenerateContent && hasValidName;
+            // Exclude special models (TTS, image generation, etc.)
+            const isTextModel = !m.name.includes('-tts') && 
+                               !m.name.includes('-image') && 
+                               !m.name.includes('thinking') &&
+                               !m.name.includes('computer-use') &&
+                               !m.name.includes('robotics') &&
+                               !m.name.includes('learnlm') &&
+                               !m.name.includes('gemma') &&
+                               !m.name.includes('nano-banana');
+            return supportsGenerateContent && hasValidName && isTextModel;
           })
           .map(m => {
             // Remove 'models/' prefix if present
             let modelName = m.name.replace(/^models\//, '');
-            console.log(`  - Model: ${m.name} -> ${modelName}`);
+            // Log model details for debugging
+            console.log(`  - Model: ${m.name} -> ${modelName} (methods: ${m.supportedGenerationMethods?.join(', ') || 'none'})`);
             return modelName;
           });
-        console.log(`📋 Found ${availableModels.length} available models:`, availableModels.slice(0, 5).join(', '));
+        console.log(`📋 Found ${availableModels.length} available text models:`, availableModels.slice(0, 5).join(', '));
         
         // 缓存结果
         this.availableModelsCache = availableModels;
@@ -190,7 +200,7 @@ class AIService {
             headers: {
               'Content-Type': 'application/json'
             },
-            timeout: 30000
+            timeout: 60000 // Increase timeout to 60 seconds for slow responses
           };
 
           if (this.proxyAgent) {
@@ -199,24 +209,35 @@ class AIService {
           }
 
           // 使用重试机制处理 429 错误
+          // Note: Don't retry on timeout, just try next model
           const response = await this.retryWithBackoff(async () => {
-            return await axios.post(
-              url,
-              {
-                contents: [{
-                  parts: [{
-                    text: prompt
-                  }]
-                }],
-                generationConfig: {
-                  temperature: 0.9,
-                  topK: 40,
-                  topP: 0.95,
-                  maxOutputTokens: maxTokens || 500
-                }
-              },
-              axiosConfig
-            );
+            const startTime = Date.now();
+            try {
+              const result = await axios.post(
+                url,
+                {
+                  contents: [{
+                    parts: [{
+                      text: prompt
+                    }]
+                  }],
+                  generationConfig: {
+                    temperature: 0.9,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: maxTokens || 500
+                  }
+                },
+                axiosConfig
+              );
+              const duration = Date.now() - startTime;
+              console.log(`   ✅ Request completed in ${duration}ms`);
+              return result;
+            } catch (err) {
+              const duration = Date.now() - startTime;
+              console.log(`   ❌ Request failed after ${duration}ms: ${err.message}`);
+              throw err;
+            }
           }, 3, 2000); // 最多重试3次，基础延迟2秒
 
           if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
@@ -232,9 +253,16 @@ class AIService {
             model,
             apiVersion,
             status: error.response?.status,
-            message: error.response?.data?.error?.message || error.message
+            message: error.response?.data?.error?.message || error.message,
+            code: error.code
           };
           errors.push(errorInfo);
+          
+          // Handle timeout errors
+          if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            console.log(`⏱️ Model ${model} with API ${apiVersion} timed out, trying next...`);
+            continue; // Try next API version or model
+          }
           
           // If it's a 404 (model not found), try next combination
           if (error.response && error.response.status === 404) {
