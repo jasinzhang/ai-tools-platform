@@ -140,33 +140,13 @@ class AIService {
 
     // List of models to try in order (with fallback)
     // Priority: User specified > Confirmed working models > Available models from API > Other models
-    const modelsToTry = [
-      process.env.GEMINI_MODEL, // User specified model first
-      // Confirmed working models (from user's Google dashboard)
-      'gemini-2.5-flash',
-      'gemini-2.5-pro-exp',
-      // Try available models from API (but prioritize confirmed ones above)
-      ...(availableModels.length > 0 ? availableModels.filter(m => 
-        !modelsToTry.includes(m) && 
-        m !== 'gemini-2.5-flash' && 
-        m !== 'gemini-2.5-pro-exp'
-      ).slice(0, 3) : []), // Use up to 3 additional discovered models
-      // 1.5 series (fallback)
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-pro-latest',
-      // Legacy models (last resort)
-      'gemini-pro'
-    ].filter(Boolean); // Remove undefined values
-    
-    // Fix: modelsToTry might reference itself before definition, so rebuild
     const confirmedModels = [
       process.env.GEMINI_MODEL,
       'gemini-2.5-flash',
       'gemini-2.5-pro-exp'
     ].filter(Boolean);
     
+    // Get additional models from API (excluding confirmed ones)
     const additionalModels = availableModels.length > 0 
       ? availableModels.filter(m => !confirmedModels.includes(m)).slice(0, 3)
       : [];
@@ -179,14 +159,15 @@ class AIService {
       'gemini-pro'
     ];
     
-    const modelsToTryFixed = [
+    // Combine all models in priority order
+    const modelsToTry = [
       ...confirmedModels,
       ...additionalModels,
       ...fallbackModels
     ].filter(Boolean);
 
     // Remove duplicates
-    const uniqueModels = [...new Set(modelsToTryFixed)];
+    const uniqueModels = [...new Set(modelsToTry)];
     
     console.log(`🔍 Will try ${uniqueModels.length} models:`, uniqueModels.slice(0, 5).join(', '), uniqueModels.length > 5 ? '...' : '');
 
