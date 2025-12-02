@@ -242,12 +242,35 @@ class AIService {
             }
           }, 3, 2000); // 最多重试3次，基础延迟2秒
 
+          // Log response structure for debugging
+          console.log(`   📦 Response status: ${response.status}`);
+          console.log(`   📦 Response has data: ${!!response.data}`);
+          console.log(`   📦 Response has candidates: ${!!(response.data && response.data.candidates)}`);
+          console.log(`   📦 Candidates length: ${response.data?.candidates?.length || 0}`);
+          
           if (!response.data || !response.data.candidates || !response.data.candidates[0]) {
-            throw new Error('Invalid response from Gemini API');
+            console.log(`   ⚠️ Invalid response structure:`, JSON.stringify(response.data).substring(0, 500));
+            throw new Error('Invalid response from Gemini API: missing candidates');
           }
 
-          const text = response.data.candidates[0].content.parts[0].text;
+          const candidate = response.data.candidates[0];
+          console.log(`   📦 Candidate has content: ${!!candidate.content}`);
+          console.log(`   📦 Candidate has parts: ${!!(candidate.content && candidate.content.parts)}`);
+          console.log(`   📦 Parts length: ${candidate.content?.parts?.length || 0}`);
+          
+          if (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {
+            console.log(`   ⚠️ Invalid candidate structure:`, JSON.stringify(candidate).substring(0, 500));
+            throw new Error('Invalid response from Gemini API: missing content parts');
+          }
+
+          const text = candidate.content.parts[0].text;
+          if (!text) {
+            console.log(`   ⚠️ Empty text in response:`, JSON.stringify(candidate.content.parts[0]).substring(0, 500));
+            throw new Error('Invalid response from Gemini API: empty text');
+          }
+          
           console.log(`✅ Successfully used Gemini model: ${model} with API ${apiVersion}`);
+          console.log(`   📝 Response text length: ${text.length} characters`);
           return text.trim();
         } catch (error) {
           // Collect error information
