@@ -14,7 +14,48 @@ Visit https://docs.cursor.com/account/regions for more information.
 
 ## ✅ 解决方案（按推荐顺序）
 
-### 方案 1: 配置系统代理（推荐）⭐
+### 方案 1: 在 Cursor 配置文件中设置代理（最有效）⭐⭐⭐
+
+这是**最直接有效**的方法，直接在 Cursor 的配置文件中设置代理。
+
+#### 步骤 1: 打开 Cursor 设置文件
+
+1. 打开 Cursor
+2. 按 `Cmd + Shift + P` (macOS) 或 `Ctrl + Shift + P` (Windows)
+3. 输入 `settings json`
+4. 选择 `Preferences: Open User Settings (JSON)`
+
+#### 步骤 2: 添加代理配置
+
+在打开的 JSON 配置文件中，添加以下内容：
+
+```json
+{
+  "http.proxy": "http://127.0.0.1:7897",
+  "http.proxySupport": "override",
+  "cursor.general.disableHttp2": true
+}
+```
+
+**重要**：
+- `7897` 是你的 Clash HTTP 代理端口
+- 如果端口不同，请修改为你的实际端口
+
+#### 步骤 3: 保存并重启
+
+1. 保存配置文件（`Cmd + S` 或 `Ctrl + S`）
+2. **完全退出 Cursor**（Command+Q 或 Alt+F4）
+3. 重新启动 Cursor
+4. 测试 AI 功能
+
+#### 步骤 4: 验证
+
+1. 在 Cursor 中尝试使用 AI 功能
+2. 如果不再出现地区限制错误，说明配置成功！
+
+---
+
+### 方案 2: 配置系统代理（备用方案）⭐
 
 Cursor IDE 可能会使用系统代理设置。
 
