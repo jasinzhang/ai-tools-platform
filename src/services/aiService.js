@@ -152,8 +152,10 @@ class AIService {
     // Priority: User specified > Confirmed working models > Available models from API > Other models
     const confirmedModels = [
       process.env.GEMINI_MODEL,
+      'gemini-3-pro', // Latest model, may have region restrictions
       'gemini-2.5-flash',
-      'gemini-2.5-pro-exp'
+      'gemini-2.5-pro-exp',
+      'gemini-2.5-pro'
     ].filter(Boolean);
     
     // Get additional models from API (excluding confirmed ones)
